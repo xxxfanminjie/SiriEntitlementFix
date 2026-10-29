@@ -1,0 +1,8 @@
+Package: com.user.sirientitlementfix
+Name: SiriEntitlementFix
+Version: 1.0
+Architecture: iphoneos-arm64
+Description: Universal hook: block INVocabulary to fix entitlement crash in LiveContainer
+Maintainer: User
+Author: User
+Section: Tweaks
