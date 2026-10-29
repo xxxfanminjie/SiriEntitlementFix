@@ -2,7 +2,7 @@
 # 不写 INSTALL_TARGET_PROCESSES：不绑定进程，由 LiveContainer 注入后对容器内所有 App 生效
 
 ARCHS = arm64 arm64e
-TARGET = iphone:clang:16.0:15.0
+TARGET = iphone:clang:16.5:15.0
 
 include $(THEOS)/makefiles/common.mk
 
