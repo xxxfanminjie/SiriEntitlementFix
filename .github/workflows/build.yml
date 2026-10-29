@@ -25,6 +25,9 @@ jobs:
           rm -rf /opt/theos/sdks
           git clone --depth 1 https://github.com/theos/sdks.git /opt/theos/sdks
 
+      - name: Install ldid (for signing)
+        run: brew install ldid
+
       - name: Build
         env:
           THEOS: /opt/theos
@@ -34,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SiriEntitlementFix
-          path: .theos/obj/debug/arm64/SiriEntitlementFix.dylib
+          path: .theos/obj/debug/SiriEntitlementFix.dylib
