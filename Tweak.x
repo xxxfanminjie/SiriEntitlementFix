@@ -1,49 +1,24 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
-static void swizzle(Class cls, SEL origSel, SEL newSel) {
-    Method orig = class_getInstanceMethod(cls, origSel);
-    Method new = class_getInstanceMethod(cls, newSel);
-    if (orig && new) {
-        method_exchangeImplementations(orig, new);
-    }
-}
+static Class emptyCls;
 
-static void swizzleClass(Class cls, SEL origSel, SEL newSel) {
-    Method orig = class_getClassMethod(cls, origSel);
-    Method new = class_getClassMethod(cls, newSel);
-    if (orig && new) {
-        method_exchangeImplementations(orig, new);
-    }
-}
-
-@interface INPreferences : NSObject
-@end
-
-@implementation INPreferences (SiriFix)
-+ (id)fix_alloc {
-    NSLog(@"[SiriFix] Block INPreferences alloc");
+static id emptyClassStub(id self, SEL _cmd) {
+    NSLog(@"[SiriFix] Blocked class %@ selector %@", NSStringFromClass(self), NSStringFromSelector(_cmd));
     return nil;
 }
-@end
-
-@interface INVocabulary : NSObject
-@end
-
-@implementation INVocabulary (SiriFix)
-+ (id)fix_alloc {
-    NSLog(@"[SiriFix] Block INVocabulary alloc");
-    return nil;
-}
-@end
 
 %ctor {
-    Class clzPref = objc_getClass("INPreferences");
-    Class clzVoc = objc_getClass("INVocabulary");
-    if(clzPref) {
-        swizzleClass(clzPref, @selector(alloc), @selector(fix_alloc));
+    Class INPreferences = objc_getClass("INPreferences");
+    Class INVocabulary = objc_getClass("INVocabulary");
+    if(!INPreferences && !INVocabulary) return;
+
+    emptyCls = objc_getClass("NSObject");
+
+    if (INPreferences) {
+        class_addMethod(INPreferences, @selector(resolveClassMethod:), (IMP)emptyClassStub, "c@::");
     }
-    if(clzVoc) {
-        swizzleClass(clzVoc, @selector(alloc), @selector(fix_alloc));
+    if (INVocabulary) {
+        class_addMethod(INVocabulary, @selector(resolveClassMethod:), (IMP)emptyClassStub, "c@::");
     }
 }
