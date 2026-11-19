@@ -1,31 +1,19 @@
 #import <substrate.h>
 #import <Foundation/Foundation.h>
 
-static id (*orig_INVocabulary_alloc)(Class, SEL);
-static id hook_INVocabulary_alloc(Class self, SEL _cmd)
-{
-    NSLog(@"[SiriEntitlementFix] Block INVocabulary alloc");
-    return nil;
+static void (*orig_objc_exception_throw)(id exception);
+
+static void hook_objc_exception_throw(id exception) {
+    if ([exception isKindOfClass:[NSException class]]) {
+        NSString *reason = [(NSException *)exception reason];
+        if (reason && [reason containsString:@"com.apple.developer.siri"]) {
+            NSLog(@"[SiriFix] 捕获Siri权限异常，直接丢弃");
+            return;
+        }
+    }
+    orig_objc_exception_throw(exception);
 }
 
-static id (*orig_INPreferences_alloc)(Class, SEL);
-static id hook_INPreferences_alloc(Class self, SEL _cmd)
-{
-    NSLog(@"[SiriEntitlementFix] Block INPreferences alloc");
-    return nil;
-}
-
-%ctor
-{
-    Class cls_INVocabulary = objc_getClass("INVocabulary");
-    if (cls_INVocabulary)
-    {
-        MSHookMessageEx(cls_INVocabulary, @selector(alloc), (IMP)hook_INVocabulary_alloc, (IMP *)&orig_INVocabulary_alloc);
-    }
-
-    Class cls_INPreferences = objc_getClass("INPreferences");
-    if (cls_INPreferences)
-    {
-        MSHookMessageEx(cls_INPreferences, @selector(alloc), (IMP)hook_INPreferences_alloc, (IMP *)&orig_INPreferences_alloc);
-    }
+%ctor {
+    MSHookFunction((void *)dlsym(RTLD_NEXT, "objc_exception_throw"), (void *)hook_objc_exception_throw, (void **)&orig_objc_exception_throw);
 }
