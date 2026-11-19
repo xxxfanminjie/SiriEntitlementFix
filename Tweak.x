@@ -1,27 +1,49 @@
-#import <substrate.h>
 #import <Foundation/Foundation.h>
-#include <dlfcn.h>
-// 补上 RTLD_NEXT 定义
-#ifndef RTLD_NEXT
-#define RTLD_NEXT ((void *)-1)
-#endif
+#import <objc/runtime.h>
 
-static void (*orig_objc_exception_throw)(id exception);
-
-static void hook_objc_exception_throw(id exception) {
-    if ([exception isKindOfClass:[NSException class]]) {
-        NSString *reason = [(NSException *)exception reason];
-        if (reason && [reason containsString:@"com.apple.developer.siri"]) {
-            NSLog(@"[SiriFix] Catch Siri entitlement exception, dropped");
-            return;
-        }
+static void swizzle(Class cls, SEL origSel, SEL newSel) {
+    Method orig = class_getInstanceMethod(cls, origSel);
+    Method new = class_getInstanceMethod(cls, newSel);
+    if (orig && new) {
+        method_exchangeImplementations(orig, new);
     }
-    orig_objc_exception_throw(exception);
 }
 
+static void swizzleClass(Class cls, SEL origSel, SEL newSel) {
+    Method orig = class_getClassMethod(cls, origSel);
+    Method new = class_getClassMethod(cls, newSel);
+    if (orig && new) {
+        method_exchangeImplementations(orig, new);
+    }
+}
+
+@interface INPreferences : NSObject
+@end
+
+@implementation INPreferences (SiriFix)
++ (id)fix_alloc {
+    NSLog(@"[SiriFix] Block INPreferences alloc");
+    return nil;
+}
+@end
+
+@interface INVocabulary : NSObject
+@end
+
+@implementation INVocabulary (SiriFix)
++ (id)fix_alloc {
+    NSLog(@"[SiriFix] Block INVocabulary alloc");
+    return nil;
+}
+@end
+
 %ctor {
-    void *sym = dlsym(RTLD_NEXT, "objc_exception_throw");
-    if (sym) {
-        MSHookFunction(sym, (void *)hook_objc_exception_throw, (void **)&orig_objc_exception_throw);
+    Class clzPref = objc_getClass("INPreferences");
+    Class clzVoc = objc_getClass("INVocabulary");
+    if(clzPref) {
+        swizzleClass(clzPref, @selector(alloc), @selector(fix_alloc));
+    }
+    if(clzVoc) {
+        swizzleClass(clzVoc, @selector(alloc), @selector(fix_alloc));
     }
 }
